@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角洲行动 S9赛季任务追踪器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 30px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.8; font-size: 14px; }
+        .stage-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stage-tab { padding: 12px 20px; background: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: all 0.2s; }
+        .stage-tab:hover { background: #e8e8e8; }
+        .stage-tab.active { background: #1a1a2e; color: white; }
+        .legend { background: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+        .legend-title { font-weight: 600; color: #888; font-size: 13px; text-transform: uppercase; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .legend-dot.main { background: #e74c3c; }
+        .legend-dot.side { background: #3498db; }
+        .legend-dot.fate { background: #9b59b6; }
+        .map-filter { background: white; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+        .filter-title { font-weight: 600; color: #888; font-size: 12px; text-transform: uppercase; margin-right: 8px; }
+        .filter-btn { padding: 5px 12px; border: 1px solid #ddd; border-radius: 16px; background: white; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        .filter-btn:hover { border-color: #1a1a2e; }
+        .filter-btn.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+        .filter-btn.kill { border-color: #e74c3c; color: #e74c3c; }
+        .filter-btn.kill.active { background: #e74c3c; color: white; }
+        .need-items-bar { background: linear-gradient(135deg, #fff3e0, #ffcc80); color: #333; padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; border: 2px solid #ff9800; }
+        .need-items-bar.hidden { display: none; }
+        .need-items-bar-title { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .need-items-bar-items { display: flex; flex-wrap: wrap; gap: 6px; }
+        .need-item-tag { background: #fff; color: #e65100; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #ff9800; cursor: pointer; transition: all 0.2s; display: block; margin-bottom: 6px; }
+        .need-item-tag:hover { background: #ff9800; color: white; }
+        .need-item-tag strong { color: #c0392b; }
+        .need-item-tag:hover strong { color: #fff; }
+        .task-item.need-item { border-left: 3px solid #e74c3c; background: #fff8f8; }
+        .task-item.need-item .task-title-text { font-weight: 700; color: #c0392b; }
+        .tag-need { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; margin-left: 4px; }
+        .map-filter { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+        .batch-btn { padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; }
+        .batch-btn:hover { background: #e8e8e8; border-color: #1a1a2e; }
+        .batch-btn.fate { border-color: #9b59b6; color: #9b59b6; }
+        .batch-btn.fate:hover { background: #9b59b6; color: white; }
+        .batch-btn.reset { border-color: #e74c3c; color: #e74c3c; }
+        .batch-btn.reset:hover { background: #e74c3c; color: white; }
+        .stage-content { display: none; }
+        .stage-content.active { display: block; }
+
+        /* Two column layout */
+        .stage-body { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .stage-body.full-width { grid-template-columns: 1fr; }
+        @media (max-width: 1000px) { .stage-body { grid-template-columns: 1fr; } }
+
+        .quest-column { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+        .column-header { padding: 12px 16px; color: white; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .column-header.main { background: linear-gradient(135deg, #c0392b, #a93226); }
+        .column-header.side { background: linear-gradient(135deg, #2980b9, #1f6391); }
+        .column-header .count { background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .column-check { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: all 0.2s; }
+        .column-check:hover { border-color: white; background: rgba(255,255,255,0.2); }
+        .column-check.checked { background: #27ae60; border-color: #27ae60; }
+        .column-check.checked::after { content: '\2713'; color: white; font-size: 12px; font-weight: bold; }
+        .column-check.indeterminate { background: #f39c12; border-color: #f39c12; }
+        .column-check.indeterminate::after { content: '\2713'; color: white; font-size: 10px; }
+
+        /* Side group headers */
+        .side-group { border-bottom: 1px solid #eee; }
+        .side-group:last-child { border-bottom: none; }
+        .side-group-header { background: #f8f9fa; padding: 8px 14px; font-size: 12px; font-weight: 600; color: #555; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+        .side-group-header:hover { background: #e8e8e8; }
+        .side-group-header .lock-icon { font-size: 10px; }
+        .side-group-header .collapse-icon { margin-left: auto; transition: transform 0.2s; }
+        .side-group-header.collapsed .collapse-icon { transform: rotate(-90deg); }
+        .side-group.collapsed .task-item { display: none; }
+
+        /* Stars */
+        .star { color: #f1c40f; font-size: 11px; }
+        .star.empty { color: #ccc; }
+
+        /* Task items */
+        .task-item { border-bottom: 1px solid #eee; padding: 12px 14px; transition: background 0.15s; }
+        .task-item:last-child { border-bottom: none; }
+        .task-item:hover { background: #fafafa; }
+        .task-item.completed { background: #f0f9f0; }
+        .task-item.completed .task-title-text { text-decoration: line-through; color: #999; }
+        .task-item.locked { background: #f5f5f5; opacity: 0.6; }
+        .task-item.locked .task-title-text { color: #aaa; }
+        .task-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+        .task-checkbox { width: 18px; height: 18px; border: 2px solid #ccc; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; margin-top: 2px; }
+        .task-checkbox:hover { border-color: #1a1a2e; }
+        .task-checkbox.checked { background: #27ae60; border-color: #27ae60; }
+        .task-checkbox.checked::after { content: '\2713'; color: white; font-size: 12px; font-weight: bold; }
+        .task-checkbox.locked { background: #ddd; border-color: #bbb; cursor: not-allowed; }
+        .task-checkbox.locked::after { content: '\1F512'; font-size: 10px; }
+        .task-title-text { font-weight: 600; font-size: 13px; flex: 1; }
+        .task-type { font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
+        .task-type.main { background: #fde8e8; color: #c0392b; }
+        .task-type.side { background: #e8f4fd; color: #2980b9; }
+        .tag { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; margin: 1px; }
+        .tag-map { background: #fff3e0; color: #e65100; }
+        .tag-item { background: #e8f5e9; color: #2e7d32; }
+        .tag-must { background: #fff8e1; color: #f57f17; }
+        .tag-seq { background: #f3e5f5; color: #7b1fa2; }
+        .objective { padding: 5px 8px; background: #f8f9fa; border-radius: 4px; margin-bottom: 4px; font-size: 12px; line-height: 1.4; }
+        .objective:last-child { margin-bottom: 0; }
+        .objective-tags { margin-top: 4px; }
+        .links-section { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
+        .links-title { font-size: 10px; color: #888; margin-bottom: 4px; }
+        .linked-task { display: inline-block; padding: 2px 6px; background: #f0f0f0; border-radius: 3px; font-size: 10px; color: #333; margin: 1px; cursor: pointer; transition: background 0.15s; }
+        .linked-task:hover { background: #1a1a2e; color: white; }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .header { padding: 20px; }
+            .header h1 { font-size: 18px; }
+            .header p { font-size: 11px; }
+            .stage-tabs { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+            .stage-tab { padding: 8px 12px; font-size: 12px; min-width: 70px; }
+            .stage-tab small { font-size: 10px; }
+            .task-item { padding: 10px; }
+            .column-check { width: 24px; height: 24px; }
+            .batch-btn { padding: 8px 12px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>三角洲行动 S9赛季任务追踪器</h1>
+            <p>【回声】赛季 · 共141个任务 · 点击任务即可标记完成</p>
+        </div>
+
+        <div id="need-items-bar" class="need-items-bar">
+            <div class="need-items-bar-title">📦 待携带物品（点击跳转任务）</div>
+            <div class="need-items-bar-items" id="need-items-list"></div>
+        </div>
+
+        <div class="map-filter">
+            <span class="filter-title">筛选:</span>
+            <button class="filter-btn active" data-map="all">全部</button>
+            <button class="filter-btn" data-map="零号大坝">零号大坝</button>
+            <button class="filter-btn" data-map="巴克什">巴克什</button>
+            <button class="filter-btn" data-map="航天基地">航天基地</button>
+            <button class="filter-btn" data-map="长弓溪谷">长弓溪谷</button>
+            <button class="filter-btn" data-map="潮汐监狱">潮汐监狱</button>
+            <button class="filter-btn" data-map="任意">任意</button>
+            <button class="filter-btn kill" data-map="kill">⚔️击杀</button>
+        </div>
+
+        
+        <div class="legend">
+            <span class="legend-title">图例:</span>
+            <div class="legend-item"><span class="legend-dot main"></span> 主线</div>
+            <div class="legend-item"><span class="legend-dot side"></span> 支线</div>
+            <div class="legend-item"><span class="legend-dot fate"></span> 命运契约</div>
+        </div>
+
+        <div class="stage-tabs">
+            <button class="stage-tab active" data-stage="1">阶段一<br><small id="tab-1">0/7 ★ 0/8</small></button>
+            <button class="stage-tab" data-stage="2">阶段二<br><small id="tab-2">0/8 ★ 0/12</small></button>
+            <button class="stage-tab" data-stage="3">阶段三<br><small id="tab-3">0/8 ★ 0/14</small></button>
+            <button class="stage-tab" data-stage="4">阶段四<br><small id="tab-4">0/6</small></button>
+            <button class="stage-tab" data-stage="fate">命运契约<br><small id="tab-fate">0/7</small></button>
+        </div>
+
+        <div class="stage-content active" id="stage-1"></div>
+        <div class="stage-content" id="stage-2"></div>
+        <div class="stage-content" id="stage-3"></div>
+        <div class="stage-content" id="stage-4"></div>
+        <div class="stage-content" id="stage-fate"></div>
+    </div>
+
+    <script>
+// 支线任务星星配置
+const groupStars = {
+    // 阶段一 (需要8★，全部完成可获10★)
+    '配给运用作战': 3,
+    '两位阿萨拉人': 3,
+    '逃脱艺术：基础': 2,
+    '保障有力': 2,
+    // 阶段二 (需要12★，全部完成可获12★)
+    '阿萨拉的启明星': 2,
+    '披坚执锐': 5,
+    '掘金狂潮': 4,
+    '无名梦魇': 4,
+    '搜索与歼灭': 3,
+    '控制与保障': 3,
+    '博物强识：基础收集': 3,
+    '清洁工作': 2,
+    // 阶段三 (需要14★，全部完成可获14★)
+    '战斗专家：金枪客': 5,
+    '战斗专家：狙击精英': 5,
+    '双钻迷局': 5,
+    '战斗专家：区域猎手': 4,
+    '次世代练爱': 4,
+    '逃脱艺术：金蝉脱壳': 4,
+    '博物强识：精致人生': 3,
+    '博物强识：风卷残云': 3,
+};
+
+// 阶段星星配置
+const stageStarConfig = {
+    1: { required: 8, total: 10 },
+    2: { required: 12, total: 12 },
+    3: { required: 14, total: 14 },
+    4: { required: 0, total: 0 },
+    'fate': { required: 0, total: 0 }
+};
+
+const allTasks = [
+    {id:1,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'1.【长路伊始】',objectives:["在任意机密/绝密行动中，成功撤离1次（单局收益需要≥250000哈夫币）"],maps:["任意"],requiresComplete:false},
+    {id:2,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'2.【初显锋芒】',objectives:["在任意机密/绝密行动中，使用任意突击步枪/冲锋枪/霰弹枪，击败5名敌方士兵"],maps:["任意"],requiresComplete:false},
+    {id:3,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'3.【统筹物料】',objectives:["在任意机密/绝密行动中，累计成功带出3件品质≥紫色的工艺藏品/工具材料/医疗物品类收集品"],maps:["任意"],requiresComplete:false},
+    {id:4,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'4.【匿名信】',objectives:["上交1个 【亮闪闪的海盗金币】","上交2个 【古怪的海盗银币】","上交3个 【锈迹斑斑的海盗铜币】"],maps:["任意"],requiresComplete:false},
+    {id:5,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'5.【觅声追迹】',objectives:["在零号大坝机密/永夜行动中，前往大坝行政楼东侧仓库，获取任务物品 【加密物证录音】","在零号大坝机密/永夜行动中，前往大坝行政楼西侧工地内指定位置，获取任务物品 【放有解决方案的盒子】"],maps:["零号大坝"],requiresComplete:false},
+    {id:6,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'6.【脑机静默】',objectives:["在巴克什机密/绝密行动中，前往巴克什老城区民房内指定位置，获取任务物品 【脑机实验日志-未署名】","在巴克什或航天基地的机密/绝密行动中，成功首次破解2次骇客电脑"],maps:["巴克什","航天基地"],requiresComplete:false},
+    {id:7,stage:1,type:'main',group:'主要目标：失去信标',order:0,title:'7.【父与子】',objectives:["在航天基地机密/绝密行动中，前往中控区二楼控制中心机房指定位置，放置物品 【侦听模块】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往中控区的监听设备旁，超感回溯军用终端处所遗留的语音线索"],maps:["航天基地"],requiresComplete:false},
+    {id:8,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'8.【移花接木】',objectives:["在巴克什机密/绝密行动中，前往大浴场二楼，获取任务物品 【关于移花接木】","在巴克什机密/绝密行动中，前往集市附近的民房，超感回溯卫星电话处所遗留的语音线索","在巴克什机密/绝密行动中，前往老城区指定地点，放置物品 【侦听模块】（需要前往研发部门军需处购买）"],maps:["巴克什"],requiresComplete:false},
+    {id:9,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'9.【归档与归宿】',objectives:["在航天基地机密/绝密行动中，前往中控区的监听设备旁，超感回溯军用终端处所遗留的语音线索","在航天基地机密/绝密行动中，前往中控区的指定办公室，获取任务物品 【归档信封】"],maps:["航天基地"],requiresComplete:false},
+    {id:10,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'10.【过早的别离】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，前往大坝地下的机房，放置物品 【侦听模块】（需要前往研发部门军需处购买）","在零号大坝机密/永夜行动中，前往大坝下游水边，超感回溯口琴处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝南侧下游水边，放置物品 【金玫瑰的复制品】（需要前往研发部门军需处购买）"],maps:["零号大坝"],requiresComplete:true},
+    {id:11,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'11.【生存演练】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什或航天基地的机密/绝密行动中，成功撤离1次（单局收益需要≥500000哈夫币）","在巴克什或航天基地的机密/绝密行动中，成功带出3件品质≥紫色的医疗物品/能源燃料/家居物品/工具材料类收集品"],maps:["巴克什","航天基地"],requiresComplete:true},
+    {id:12,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'12.【面具彼端】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，前往游客中心二楼，获取任务物品 【兰登的事件报告1】","在零号大坝机密/永夜行动中，前往游客中心南侧公交车处进行调查","在零号大坝机密/永夜行动中，前往游客中心西侧道路指定车辆处进行调查","在零号大坝机密/永夜行动中，前往大坝下游水边指定区域，超感回溯送别信标地点处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:true},
+    {id:13,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'13.【幽深之影，高贵之翼】',objectives:["在零号大坝机密/永夜行动中，前往大坝军营旁内部通道指定地点，获取任务物品 【兰登的留言】","在巴克什机密/绝密行动中，前往丢包撤离点附近区域，超感回溯卫星电话处所遗留的语音线索"],maps:["零号大坝","巴克什"],requiresComplete:false},
+    {id:14,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'14.【战逃反应】',objectives:["在巴克什机密/绝密行动中，前往老城区的阿萨拉集市指定区域，获取任务物品 【耗尽电量的无人机】","在巴克什机密/绝密行动中，前往巴克什巴别塔区域的交界处，超感回溯典狱长物件处所遗留的语音线索"],maps:["巴克什"],requiresComplete:false},
+    {id:15,stage:2,type:'main',group:'主要目标：交错的命运',order:0,title:'15.【分道扬镳】',objectives:["在航天基地机密/绝密行动中，前往宿舍指定房间，超感回溯曼德尔砖处所遗留的语音线索","在航天基地机密/绝密行动中，前往宿舍指定房间，获取任务物品 【兰登的事件报告2】"],maps:["航天基地"],requiresComplete:false},
+    {id:16,stage:3,type:'main',group:'主要目标：新血',order:0,title:'16.【战斗数据】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，前往行政楼经理室，获取任务物品 【战斗记录器】","在零号大坝机密/永夜行动中，携带任务物品 【战斗记录器】，成功撤离"],maps:["零号大坝"],requiresComplete:true},
+    {id:17,stage:3,type:'main',group:'主要目标：新血',order:0,title:'17.【浅层破译】',objectives:["*必须实时装备一个 【战斗记录器】","在巴克什或航天基地的机密/绝密行动中，携带任务物品 【战斗记录器】时（需要前往研发部门军需处购买），击败5名任意特殊兵种","在巴克什或航天基地的机密/绝密行动中，携带任务物品 【战斗记录器】时（需要前往研发部门军需处购买），完成3次任意局内行动"],maps:["巴克什","航天基地"],requiresComplete:false},
+    {id:18,stage:3,type:'main',group:'主要目标：新血',order:0,title:'18.【柳暗花明】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往工业区指定办公室，超感回溯卫星电话处所遗留的语音线索","在航天基地机密/绝密行动中，前往宿舍区指定房间，获取任务物品 【卢克的档案】"],maps:["航天基地"],requiresComplete:true},
+    {id:19,stage:3,type:'main',group:'主要目标：新血',order:0,title:'19.【"声呐"】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往蓝汀旅馆的二楼廊桥处进行调查","在巴克什机密/绝密行动中，前往老城区东侧营地附近路面的卡车后进行调查","在巴克什机密/绝密行动中，前往老城区营地制高点进行调查"],maps:["巴克什"],requiresComplete:true},
+    {id:20,stage:3,type:'main',group:'主要目标：新血',order:0,title:'20.【辨声神技】',objectives:["在长弓溪谷或零号大坝机密/永夜行动中，成功撤离时，累计取得收益达到1000000哈夫币","在巴克什或航天基地的机密/绝密行动中，在15分钟内成功撤离1次"],maps:["零号大坝","巴克什","航天基地","长弓溪谷"],requiresComplete:false},
+    {id:21,stage:3,type:'main',group:'主要目标：新血',order:0,title:'21.【前置调查-1】',objectives:["在零号大坝机密/永夜行动中，前往大坝行政楼地下机房的服务器设备旁，放置物品 【声纹记录器】（需要前往研发部门军需处购买）","在零号大坝机密/永夜行动中，前往大坝行政楼地下机房的服务器设备旁，超感回溯军用电台处所遗留的语音线索","在航天基地机密/绝密行动中，前往中控区二楼机房，放置物品 【声纹记录器】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往中控区二楼机房，超感回溯军用电台处所遗留的语音线索"],maps:["零号大坝","航天基地"],requiresComplete:false},
+    {id:22,stage:3,type:'main',group:'主要目标：新血',order:0,title:'22.【前置调查-2】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往博物馆地下机房，放置物品 【声纹记录器】（需要前往研发部门军需处购买）","在巴克什机密/绝密行动中，前往博物馆地下机房，超感回溯军用电台处所遗留的语音线索","在巴克什机密/绝密行动中，前往大浴场，放置物品 【声纹记录器】（需要前往研发部门军需处购买）","在巴克什机密/绝密行动中，前往大浴场指定区域，超感回溯军用电台处所遗留的语音线索"],maps:["巴克什"],requiresComplete:true},
+    {id:23,stage:3,type:'main',group:'主要目标：新血',order:0,title:'23.【聆讯出庭】',objectives:["在巴克什机密/绝密行动中，前往巴别塔海洋监测厅内，超感回溯军情录音处所遗留的语音线索","在巴克什机密/绝密行动中，前往巴别塔审讯室内，超感回溯军情录音处所遗留的语音线索"],maps:["巴克什"],requiresComplete:false},
+    {id:24,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'24.【稳健标杆】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什或航天基地的机密/绝密行动中，完成1次任意标杆行动","在巴克什或航天基地的机密/绝密行动中，成功带出3件品质≥金色的电子物品/工艺藏品类收集品"],maps:["巴克什","航天基地"],requiresComplete:true},
+    {id:25,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'25.【河流与错误】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往审讯室，超感回溯军情录音处所遗留的语音线索","在巴克什机密/绝密行动中，前往博物馆地下室机房内，获取任务物品 【聆讯报告：乌姆斯运河事件】","在巴克什机密/绝密行动中，携带任务物品 【聆讯报告：乌姆斯运河事件】，成功撤离"],maps:["巴克什"],requiresComplete:true},
+    {id:26,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'26.【胜券在握】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什或航天基地的机密/绝密行动中，成功撤离1次（单局收益需要≥1250000哈夫币）","在巴克什或航天基地的机密/绝密行动中，击败2名敌方特战干员"],maps:["巴克什","航天基地"],requiresComplete:true},
+    {id:27,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'27.【背水一战】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，成功撤离1次（单局收益需要≥1500000哈夫币）"],maps:["任意"],requiresComplete:true},
+    {id:28,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'28.【均衡之理】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在长弓溪谷或零号大坝的机密/永夜行动中，击败6名阿萨拉普通士兵","在长弓溪谷或零号大坝的机密/永夜行动中，击败4名阿萨拉卫队特殊兵种（特殊兵种包括：盾兵、狙击兵、火箭兵、机枪兵、喷火兵、首领卫士）","在巴克什或航天基地的机密/绝密行动中，击败6名哈夫克普通士兵","在巴克什或航天基地的机密/绝密行动中，击败任意6名哈夫克特殊兵种（特殊兵种包括：盾兵、狙击兵、机枪兵、喷火兵、首领卫士)","在任意机密/绝密行动中，击败2名敌方特战干员"],maps:["零号大坝","巴克什","航天基地","长弓溪谷"],requiresComplete:true},
+    {id:29,stage:4,type:'main',group:'主要目标：循声追鬼',order:0,title:'29.【正义的尽头】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往巴别塔审讯室内，超感回溯军情录音处所遗留的语音线索","在巴克什机密/绝密行动中，前往巴别塔与老城区的分界点处进行调查","在巴克什机密/绝密行动中，前往大浴场二楼，获取任务物品 【残缺的档案】","在巴克什机密/绝密行动中，携带任务物品 【残缺的档案】，成功撤离"],maps:["巴克什"],requiresComplete:true},
+    {id:30,stage:2,type:'side',group:'阿萨拉的启明星',order:1,title:'30.【外乡人在阿萨拉】',objectives:["在长弓溪谷机密行动中，前往牧场马厩内指定地点，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，前往野外营地帐篷内，超感回溯收音机处所遗留的语音线索","在长弓溪谷机密行动中，前往南部检查站小房间，超感回溯卫星电话处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:false},
+    {id:31,stage:2,type:'side',group:'阿萨拉的启明星',order:2,title:'31.【两位语言学家】',objectives:["在长弓溪谷机密行动中，前往小变电站内的藏身地点，超感回溯军用终端处所遗留的语音线索","在长弓溪谷机密行动中，累计击败6名任意敌方士兵","在长弓溪谷机密行动中，前往南部检查站二楼房间指定地点处，超感回溯作战电台处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:false},
+    {id:32,stage:2,type:'side',group:'阿萨拉的启明星',order:3,title:'32.【算力凶猛】',objectives:["单局任务目标全部完成否则重置整个任务进度","在长弓溪谷机密行动中，前往蓝港码头主楼前指定地点，获取任务物品 【加密U盘】","在长弓溪谷机密行动中，前往哈夫克雷达站实验楼二楼机房内指定地点，放置任务物品 【加密U盘】","在长弓溪谷机密行动中，前往哈夫克雷达站实验楼二楼指定地点，超感回溯军用终端处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:true},
+    {id:33,stage:2,type:'side',group:'阿萨拉的启明星',order:4,title:'33.【麻子来了】',objectives:["单局任务目标全部完成否则重置整个任务进度","在长弓溪谷机密行动中，前往小变电站内指定地点，获取任务物品 【电台广播稿件】","在长弓溪谷机密行动中，携带任务物品 【电台广播稿件】，成功撤离","在长弓溪谷机密行动中，前往野外窝棚内指定地点，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，前往超星车站附属车间内指定地点，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，前往阿米亚小镇指定地点，超感回溯作战电台处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:true},
+    {id:34,stage:2,type:'side',group:'阿萨拉的启明星',order:5,title:'34.【分几步走？】',objectives:["在长弓溪谷机密行动中，前往钻石皇后酒店内指定地点，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，累计击败6名任意阿萨拉阵营特殊兵种（特殊兵种包括：盾兵、狙击兵、火箭兵、机枪兵、喷火兵、首领卫士）","在长弓溪谷机密行动中，前往钻石皇后酒店东侧的临时据点内，超感回溯军用终端处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:false},
+    {id:35,stage:2,type:'side',group:'阿萨拉的启明星',order:6,title:'35.【战术的根源】',objectives:["单局任务目标全部完成否则重置整个任务进度","在长弓溪谷机密行动中，前往钻石皇后酒店外围野外据点处，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，前往钻石皇后酒店内停车场，超感回溯军用终端处所遗留的语音线索","在长弓溪谷机密行动中，前往钻石皇后酒店主楼内部指定地点，获取任务物品 【有雷斯戳记的金条】","在长弓溪谷机密行动中，携带任务物品 【有雷斯戳记的金条】，成功撤离","在长弓溪谷机密行动中，前往钻石皇后酒店浴场更衣室内，超感回溯作战电台处所遗留的语音线索"],maps:["长弓溪谷"],requiresComplete:true},
+    {id:36,stage:2,type:'side',group:'阿萨拉的启明星',order:7,title:'36.【有理走遍天下】',objectives:["在零号大坝机密/永夜行动中，前往大坝南侧河畔集装箱后，超感回溯军用终端处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝南侧河畔指定地点，超感回溯口琴处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝南侧野外集装箱房间内，超感回溯军用终端处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:false},
+    {id:37,stage:2,type:'side',group:'阿萨拉的启明星',order:8,title:'37.【明天还会到来】',objectives:["单局任务目标全部完成否则重置整个任务进度","在长弓溪谷机密行动中，前往哈夫克雷达站主楼一楼夹层处指定地点，超感回溯军用终端处所遗留的语音线索","在长弓溪谷机密行动中，前往钻石皇后酒店主楼二楼指定地点，超感回溯作战电台处所遗留的语音线索","在长弓溪谷机密行动中，前往哈夫克雷达站主楼一层盥洗室内，获取任务物品 【我的日记】","在长弓溪谷机密行动中，携带任务物品 【我的日记】，成功撤离"],maps:["长弓溪谷"],requiresComplete:true},
+    {id:38,stage:"fate",type:'main',group:'命运契约',order:0,title:'38.【回声觅迹·支配标杆】',objectives:["在零号大坝或长弓溪谷的机密/永夜行动中，完成2次【铁穹行动】或【破壁者行动】或 【硬通货行动】","在航天基地机密/绝密行动中，完成1次【飞升者行动】或【焰火行动】","在巴克什机密/绝密行动中，完成1次【庇护者行动】或【折翼行动】","在潮汐监狱绝密行动中，完成1次【黑潮行动】或【诛星者行动】或【猎鸦人行动】"],maps:["零号大坝","巴克什","航天基地","长弓溪谷","潮汐监狱"],requiresComplete:false},
+    {id:39,stage:"fate",type:'main',group:'命运契约',order:0,title:'39.【夺金狂潮】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，完成1次【破壁者行动】或【硬通货行动】","在零号大坝机密/永夜行动中，击败3名敌方特战干员","在零号大坝机密/永夜行动中，成功撤离1次（收益≥1250000）"],maps:["零号大坝"],requiresComplete:true},
+    {id:40,stage:"fate",type:'main',group:'命运契约',order:0,title:'40.【擒贼擒王】',objectives:["在任意机密/绝密行动中，击败任意首领5次（首领包括雷斯、赛伊德、德穆兰、直升机驾驶员、哈德森、渡鸦、典狱长）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）*如果击败【赤枭巡猎】玩法中由玩家所扮演的赛伊德，将不计入任务进度","在任意机密/绝密行动中，成功撤离时，成功累计带出任意首领信物2件（该任务排除自身/队友带入，若队内多人同时接取该任务，此目标进度在接取任务队友间共享）*首领信物包括： 【雷斯的乐谱本】， 【赛伊德的手弩】， 【脑机控制端子】， 【脑机relink医疗报告】， 【渡鸦项坠】， 【格赫罗斯的审判】， 【哮喘吸入器】"],maps:["任意"],requiresComplete:false},
+    {id:41,stage:"fate",type:'main',group:'命运契约',order:0,title:'41.【勤俭持家】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，成功撤离累计收益≥6250000"],maps:["任意"],requiresComplete:true},
+    {id:42,stage:"fate",type:'main',group:'命运契约',order:0,title:'42.【鹰眼】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，使用任意栓动狙击步枪，不装备瞄具时，击败1名敌方特战干员","在任意机密/绝密行动中，使用任意精确射手步枪，不装备瞄具时，击败1名敌方特战干员","在任意机密/绝密行动中，使用任意栓动狙击步枪，在35米以外爆头击败1名敌方特战干员","在任意机密/绝密行动中，使用任意精确射手步枪，在35米以外爆头击败1名敌方特战干员","在任意机密/绝密行动中，使用任意栓动狙击步枪，装备任意6倍及以上瞄具时，击败1名敌方特战干员","在任意机密/绝密行动中，使用任意精确射手步枪，装备任意6倍及以上瞄具时，击败1名敌方特战干员"],maps:["任意"],requiresComplete:true},
+    {id:43,stage:"fate",type:'main',group:'命运契约',order:0,title:'43.【观光客：暗云迫近】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在零号大坝或长弓溪谷的机密/永夜行动中，成功撤离1次","在航天基地或巴克什的机密/绝密行动中，成功撤离1次","在潮汐监狱绝密行动中，成功撤离1次"],maps:["零号大坝","巴克什","航天基地","长弓溪谷","潮汐监狱"],requiresComplete:true},
+    {id:44,stage:"fate",type:'main',group:'命运契约',order:0,title:'44.【终局联系】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，持有未破译的曼德尔砖时，击败1名敌方特战干员（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）","在任意机密/绝密行动中，成功破译1次曼德尔砖","在任意机密/绝密行动中，成功撤离1次"],maps:["任意"],requiresComplete:true},
+    {id:45,stage:1,type:'side',group:'配给运用作战',order:1,title:'45.【深度定制-1】',objectives:["在任意机密/绝密行动中，使用 【SMG-45冲锋枪】，击败5名敌方士兵"],maps:["任意"],requiresComplete:false},
+    {id:46,stage:1,type:'side',group:'配给运用作战',order:2,title:'46.【深度定制-2】',objectives:["在任意机密/绝密行动中，使用 【G3战斗步枪】，击败5名特殊兵种(特殊兵种包括：任意势力盾兵、狙击兵、火箭兵、机枪兵、喷火兵、首领卫士)"],maps:["任意"],requiresComplete:false},
+    {id:47,stage:1,type:'side',group:'配给运用作战',order:3,title:'47.【深度定制-3】',objectives:["在任意机密/绝密行动中，装备任意3级及以上阿萨拉风格护甲时，累计击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:48,stage:1,type:'side',group:'配给运用作战',order:4,title:'48.【深度定制-4】',objectives:["在任意机密/绝密行动中，装备任意3级及以下护甲时，使用任意冲锋枪/霰弹枪，累计击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:49,stage:1,type:'side',group:'配给运用作战',order:5,title:'49.【深度定制-5】',objectives:["在任意机密/绝密行动中，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:50,stage:1,type:'side',group:'两位阿萨拉人',order:1,title:'50.【阿萨拉双子-1】',objectives:["在零号大坝机密/永夜行动中，前往阿萨拉营地内，超感回溯卫星电话处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:false},
+    {id:51,stage:1,type:'side',group:'两位阿萨拉人',order:2,title:'51.【阿萨拉双子-2】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，前往游客中心二楼贵宾室内，超感回溯卫星电话处所遗留的语音线索","在零号大坝机密/永夜行动中，前往游客中心一楼办公室内，获取任务物品 【卫队返回舱作战日志】","在零号大坝机密/永夜行动中，携带任务物品 【卫队返回舱作战日志】，成功撤离"],maps:["零号大坝"],requiresComplete:true},
+    {id:52,stage:1,type:'side',group:'两位阿萨拉人',order:3,title:'52.【阿萨拉双子-3】',objectives:["在零号大坝机密/永夜行动中，前往导弹发射台掩体处，超感回溯卫星电话处所遗留的语音线索","在零号大坝机密/永夜行动中，完成2次任意局内行动"],maps:["零号大坝"],requiresComplete:false},
+    {id:53,stage:1,type:'side',group:'两位阿萨拉人',order:4,title:'53.【阿萨拉双子-4】',objectives:["在零号大坝机密/永夜行动中，前往坝顶平台，超感回溯卫星电话处所遗留的语音线索","在零号大坝机密/永夜行动中，前往坝顶平台，超感回溯卫星电话处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:false},
+    {id:54,stage:1,type:'side',group:'两位阿萨拉人',order:5,title:'54.【阿萨拉双子-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在零号大坝机密/永夜行动中，前往零号大坝坝顶指定地点，超感回溯作战终端处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝南侧河道，超感回溯作战终端处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:true},
+    {id:55,stage:1,type:'side',group:'逃脱艺术：基础',order:1,title:'55.【战略转进-1】',objectives:["在任意机密/绝密行动中，成功撤离1次"],maps:["任意"],requiresComplete:false},
+    {id:56,stage:1,type:'side',group:'逃脱艺术：基础',order:2,title:'56.【战略转进-2】',objectives:["在零号大坝机密/永夜行动中，从任意拉闸/付费撤离点成功撤离1次"],maps:["零号大坝"],requiresComplete:false},
+    {id:57,stage:1,type:'side',group:'逃脱艺术：基础',order:3,title:'57.【战略转进-3】',objectives:["在巴克什机密/绝密行动中，从任意拉闸撤离点成功撤离1次"],maps:["巴克什"],requiresComplete:false},
+    {id:58,stage:1,type:'side',group:'逃脱艺术：基础',order:4,title:'58.【战略转进-4】',objectives:["在航天基地机密/绝密行动中，成功撤离1次（单局收益需要≥500000哈夫币）"],maps:["航天基地"],requiresComplete:false},
+    {id:59,stage:1,type:'side',group:'逃脱艺术：基础',order:5,title:'59.【战略转进-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，成功撤离1次（单局收益需要≥750000哈夫币）","在任意机密/绝密行动中，成功带出3件品质≥紫色的电子物品类收集品"],maps:["任意"],requiresComplete:true},
+    {id:60,stage:1,type:'side',group:'保障有力',order:0,title:'60.【保障有力：配件】',objectives:["在特勤处成功生产1次 【侦察1.5/5可调瞄准镜】"],maps:["任意"],requiresComplete:false},
+    {id:61,stage:1,type:'side',group:'保障有力',order:0,title:'61.【保障有力：防护】',objectives:["在特勤处成功生产1次 【FS复合防弹衣】","在特勤处成功生产1次 【精密护甲维修包】"],maps:["任意"],requiresComplete:false},
+    {id:62,stage:1,type:'side',group:'保障有力',order:0,title:'62.【保障有力：医疗】',objectives:["在特勤处成功生产1次 【战地医疗箱】","在特勤处成功生产1次 【DAR突击手胸挂】"],maps:["任意"],requiresComplete:false},
+    {id:63,stage:1,type:'side',group:'保障有力',order:0,title:'63.【保障有力：火力】',objectives:["在特勤处成功生产1次 【5.7x28mm SS190】","在特勤处成功生产1次 【5.45x39mm BS】"],maps:["任意"],requiresComplete:false},
+    {id:64,stage:1,type:'side',group:'保障有力',order:0,title:'64.【保障有力：磐石】',objectives:["在特勤处成功生产1次 【高级护甲维修组合】"],maps:["任意"],requiresComplete:false},
+    {id:65,stage:2,type:'side',group:'披坚执锐',order:1,title:'65.【统治力】',objectives:["在任意机密/绝密行动中，装备防护等级≥5的护甲与头盔时，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:66,stage:2,type:'side',group:'披坚执锐',order:2,title:'66.【锋线前卫】',objectives:["在任意机密/绝密行动中，使用任意腰射≥99的突击步枪/冲锋枪，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:67,stage:2,type:'side',group:'披坚执锐',order:3,title:'67.【抵近射击】',objectives:["在任意机密/绝密行动中，使用配有任意爆闪手电的冲锋枪/霰弹枪，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:68,stage:2,type:'side',group:'披坚执锐',order:4,title:'68.【咬紧牙关】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，击败2名敌方特战干员"],maps:["任意"],requiresComplete:true},
+    {id:69,stage:2,type:'side',group:'披坚执锐',order:5,title:'69.【观光客·三角力量】',objectives:["任务过程中如撤离失败 则重置整个任务进度","*玩家入局时，需装备任意4级及以上三角洲风格护甲&头盔","在巴克什或航天基地的机密/绝密行动中，成功撤离1次","在零号大坝或长弓溪谷的机密/永夜行动中，成功撤离1次"],maps:["零号大坝","巴克什","航天基地","长弓溪谷"],requiresComplete:false},
+    {id:70,stage:2,type:'side',group:'掘金狂潮',order:1,title:'70.【掘金狂潮-1】',objectives:["在零号大坝机密/永夜行动中，前往大坝运河区域，超感回溯废弃无线电台处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝游客中心二楼指定位置，超感回溯录音机处所遗留的语音线索","在任意机密/绝密行动中，在任意地图的藏宝堆处累计成功送出3次赠礼"],maps:["零号大坝"],requiresComplete:false},
+    {id:71,stage:2,type:'side',group:'掘金狂潮',order:2,title:'71.【掘金狂潮-2】',objectives:["在航天基地的机密/绝密行动中，击败任意6名哈夫克士兵（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）","在航天基地机密/绝密行动中，前往码头前区域掩体处，超感回溯作战电台处所遗留的语音线索","在任意机密/绝密行动中，在任意地图的藏宝堆处累计挖掘2次藏宝堆"],maps:["航天基地"],requiresComplete:false},
+    {id:72,stage:2,type:'side',group:'掘金狂潮',order:3,title:'72.【掘金狂潮-3】',objectives:["在零号大坝机密/永夜行动中，成功埋藏并送出2件品质≥紫色的工具材料类收集品","在零号大坝机密/永夜行动中，前往大坝内部办公室，超感回溯卫星电话处所遗留的语音线索"],maps:["零号大坝"],requiresComplete:false},
+    {id:73,stage:2,type:'side',group:'掘金狂潮',order:4,title:'73.【掘金狂潮-4】',objectives:["在零号大坝机密/永夜行动中，前往大坝内部金库，超感回溯卫星电话处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝集装箱区域，超感回溯卫星电话处所遗留的语音线索","在零号大坝机密/永夜行动中，前往大坝集装箱区域，获取任务物品 【未击发的左轮】","在零号大坝机密/永夜行动中，在大坝任意地点的藏宝堆处埋藏并送出1件任务物品 【手持激光设备】（需要前往研发部门军需处购买）"],maps:["零号大坝"],requiresComplete:false},
+    {id:74,stage:2,type:'side',group:'掘金狂潮',order:5,title:'74.【掘金狂潮-5】',objectives:["在零号大坝机密/永夜行动中，前往大坝内部办公室，超感回溯卫星电话处所遗留的语音线索","在任意机密/绝密行动中，累计在任意地图的藏宝堆处成功埋藏并送出3件任意收藏品（单件收藏品价值≥75000）"],maps:["零号大坝"],requiresComplete:false},
+    {id:75,stage:2,type:'side',group:'无名梦魇',order:1,title:'75.【无名梦魇-1】',objectives:["在航天基地机密/绝密行动中，前往航天基地发射区，超感回溯作战电台处所遗留的语音线索","在航天基地机密/绝密行动中，前往航天基地发射区，超感回溯作战电台处所遗留的语音线索"],maps:["航天基地"],requiresComplete:false},
+    {id:76,stage:2,type:'side',group:'无名梦魇',order:2,title:'76.【无名梦魇-2】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往指定民房内，超感回溯卫星电话处所遗留的语音线索","在巴克什机密/绝密行动中，前往指定民房内，获取任务物品 【脑机常备药】","在巴克什机密/绝密行动中，前往巴别塔手术室，放置物品 【脑机常备药】","在巴克什机密/绝密行动中，前往巴别塔手术室，超感回溯卫星电话处所遗留的语音线索"],maps:["巴克什"],requiresComplete:true},
+    {id:77,stage:2,type:'side',group:'无名梦魇',order:3,title:'77.【无名梦魇-3】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往航天基地中控区机房，放置任务物品 【脑机传输设备】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往航天基地核心区机房，放置任务物品 【脑机传输设备】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往宿舍区一楼沙发处，超感回溯作战终端处所遗留的语音线索"],maps:["航天基地"],requiresComplete:true},
+    {id:78,stage:2,type:'side',group:'无名梦魇',order:4,title:'78.【无名梦魇-4】',objectives:["在巴克什或航天基地的机密/绝密行动中，成功带出5件品质≥紫色的医疗物品/工具材料类收集品","在巴克什机密/绝密行动中，前往蓝汀旅馆二楼，超感回溯作战终端处所遗留的语音线索"],maps:["巴克什","航天基地"],requiresComplete:false},
+    {id:79,stage:2,type:'side',group:'无名梦魇',order:5,title:'79.【无名梦魇-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，击败任意3名哈夫克特殊兵种（特殊兵种包括：盾兵、狙击兵、机枪兵、喷火兵、首领卫士)","在巴克什机密/绝密行动中，前往巴别塔手术室内，超感回溯脑机设备处所遗留的语音线索","在巴克什机密/绝密行动中，前往巴别塔手术室内，放置任务物品 【脑机传输设备】（需要前往研发部门军需处购买）"],maps:["巴克什"],requiresComplete:true},
+    {id:80,stage:2,type:'side',group:'搜索与歼灭',order:1,title:'80.【搜索与歼灭-1】',objectives:["上交1个 【航天冷却剂】","上交1个 【加密手记】"],maps:["任意"],requiresComplete:false},
+    {id:81,stage:2,type:'side',group:'搜索与歼灭',order:2,title:'81.【搜索与歼灭-2】',objectives:["在任意机密/绝密行动中，使用任意突击/侦察类特战干员时，装备防护等级≤4的护甲与头盔时，累计击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:82,stage:2,type:'side',group:'搜索与歼灭',order:3,title:'82.【搜索与歼灭-3】',objectives:["在任意机密/绝密行动中，使用任意突击/侦察类特战干员时，使用配有任意侧置瞄准镜的射手步枪/轻机枪，累计击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:83,stage:2,type:'side',group:'搜索与歼灭',order:4,title:'83.【搜索与歼灭-4】',objectives:["在任意机密/绝密行动中，使用威龙/无名时，累计击败2名敌方特战干员","在任意机密/绝密行动中，使用露娜/银翼时，成功撤离时，累计取得收益达到1000000哈夫币"],maps:["任意"],requiresComplete:false},
+    {id:84,stage:2,type:'side',group:'搜索与歼灭',order:5,title:'84.【搜索与歼灭-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，使用任意突击/侦察类特战干员时，完成3次局内行动","在任意机密/绝密行动中，使用任意突击/侦察类特战干员时，成功撤离1次"],maps:["任意"],requiresComplete:true},
+    {id:85,stage:2,type:'side',group:'控制与保障',order:1,title:'85.【控制与保障-1】',objectives:["上交1个 【检眼镜】","上交1个 【急救喷雾】"],maps:["任意"],requiresComplete:false},
+    {id:86,stage:2,type:'side',group:'控制与保障',order:2,title:'86.【控制与保障-2】',objectives:["在任意机密/绝密行动中，使用任意工程/支援类特战干员时，使用任意配备5.7x28/4.6x30弹药的武器，累计击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:87,stage:2,type:'side',group:'控制与保障',order:3,title:'87.【控制与保障-3】',objectives:["在任意机密/绝密行动中，使用任意工程/支援类特战干员时，完成1次【获取保险柜物资】行动","在任意机密/绝密行动中，使用任意工程/支援类特战干员时，完成1次【破坏物资室铁门】行动","在任意机密/绝密行动中，使用任意工程/支援类特战干员时，完成2次【清理目标区域敌人】行动"],maps:["任意"],requiresComplete:false},
+    {id:88,stage:2,type:'side',group:'控制与保障',order:4,title:'88.【控制与保障-4】',objectives:["在任意机密/绝密行动中，使用乌鲁鲁/牧羊人时，成功撤离1次（收益≥750000）","在任意机密/绝密行动中，使用蜂医/蝶时，累计成功对队友造成500点治疗"],maps:["任意"],requiresComplete:false},
+    {id:89,stage:2,type:'side',group:'控制与保障',order:5,title:'89.【控制与保障-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，使用任意工程/支援类特战干员时，完成1次标杆行动（包括铁穹行动、破壁者行动、夜莺行动、飞升行动、焰火行动、庇护者行动、折翼行动、黑潮行动、猎鸦人行动、诛星者行动、硬通货行动）","在任意机密/绝密行动中，使用任意工程/支援类特战干员时，成功撤离1次"],maps:["任意"],requiresComplete:true},
+    {id:90,stage:2,type:'side',group:'博物强识：基础收集',order:1,title:'90.【博物强识-1】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥紫色的工艺藏品/资料情报类收集品"],maps:["任意"],requiresComplete:false},
+    {id:91,stage:2,type:'side',group:'博物强识：基础收集',order:2,title:'91.【博物强识-2】',objectives:["在任意机密/绝密行动中，累计成功带出3件品质≥紫色的工具材料/能源燃料类收集品"],maps:["任意"],requiresComplete:false},
+    {id:92,stage:2,type:'side',group:'博物强识：基础收集',order:3,title:'92.【博物强识-3】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥紫色的电子物品类收集品"],maps:["任意"],requiresComplete:false},
+    {id:93,stage:2,type:'side',group:'博物强识：基础收集',order:4,title:'93.【博物强识-4】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥金色的家居物品/医疗物品类收集品"],maps:["任意"],requiresComplete:false},
+    {id:94,stage:2,type:'side',group:'博物强识：基础收集',order:5,title:'94.【博物强识-5】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，成功带出1件品质≥金色的电子物品类收集品","在任意机密/绝密行动中，成功带出2件品质≥紫色的资料情报类收集品","在任意机密/绝密行动中，成功带出1件品质≥金色的工艺藏品类收集品"],maps:["任意"],requiresComplete:true},
+    {id:95,stage:2,type:'side',group:'清洁工作',order:1,title:'95.【清道夫-1】',objectives:["在任意机密/绝密行动中，击败20名任意敌方士兵（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）"],maps:["任意"],requiresComplete:false},
+    {id:96,stage:2,type:'side',group:'清洁工作',order:2,title:'96.【清道夫-2】',objectives:["在任意机密/绝密行动中，击败12名任意敌方特殊兵种（特殊兵种包括：盾兵、狙击兵、火箭兵、机枪兵、喷火兵、首领卫士）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）"],maps:["任意"],requiresComplete:false},
+    {id:97,stage:2,type:'side',group:'清洁工作',order:3,title:'97.【清道夫-3】',objectives:["在任意机密/绝密行动中，击败8名任意阿萨拉卫队特殊兵种（特殊兵种包括：盾兵、狙击兵、火箭兵、机枪兵、喷火兵、首领卫士）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）","在任意机密/绝密行动中，击败8名任意哈夫克特殊兵种（特殊兵种包括：盾兵、狙击兵、机枪兵、喷火兵、首领卫士）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）"],maps:["任意"],requiresComplete:false},
+    {id:98,stage:2,type:'side',group:'清洁工作',order:4,title:'98.【清道夫-4】',objectives:["在任意机密/绝密行动中，击败6名任意首领卫队（包括博士、雷斯、德穆兰、渡鸦、典狱长、哈德森的随行卫队或战车）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）"],maps:["任意"],requiresComplete:false},
+    {id:99,stage:2,type:'side',group:'清洁工作',order:5,title:'99.【清道夫-5】',objectives:["在任意机密/绝密行动中，击败任意首领1次（包括雷斯、赛伊德、德穆兰、渡鸦、典狱长、哈德森）（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）*如果击败【赤枭巡猎】玩法中由玩家所扮演的赛伊德，将不计入任务进度"],maps:["任意"],requiresComplete:false},
+    {id:100,stage:3,type:'side',group:'战斗专家：金枪客',order:1,title:'100.【金枪客-1】',objectives:["上交1把按指定需求改装的 【AR57突击步枪】。"],maps:["任意"],requiresComplete:false},
+    {id:101,stage:3,type:'side',group:'战斗专家：金枪客',order:2,title:'101.【金枪客-2】',objectives:["在任意机密/绝密行动中，使用 【AR57突击步枪】，击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:102,stage:3,type:'side',group:'战斗专家：金枪客',order:3,title:'102.【金枪客-3】',objectives:["上交1把按指定需求改装的 【M249轻机枪】。"],maps:["任意"],requiresComplete:false},
+    {id:103,stage:3,type:'side',group:'战斗专家：金枪客',order:4,title:'103.【金枪客-4】',objectives:["在任意机密/绝密行动中，使用 【M249轻机枪】，击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:104,stage:3,type:'side',group:'战斗专家：金枪客',order:5,title:'104.【金枪客-5】',objectives:["上交1把按指定需求改装的 【MP7冲锋枪】。"],maps:["任意"],requiresComplete:false},
+    {id:105,stage:3,type:'side',group:'战斗专家：金枪客',order:6,title:'105.【金枪客-6】',objectives:["在任意机密/绝密行动中，使用 【MP7冲锋枪】，击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:106,stage:3,type:'side',group:'战斗专家：金枪客',order:7,title:'106.【金枪客-7】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，使用 【AR57突击步枪】，击败1名敌方特战干员","在任意机密/绝密行动中，使用 【M249轻机枪】，击败1名敌方特战干员","在任意机密/绝密行动中，使用 【MP7冲锋枪】，击败1名敌方特战干员"],maps:["任意"],requiresComplete:true},
+    {id:107,stage:3,type:'side',group:'战斗专家：狙击精英',order:1,title:'107.【狙击精英-1】',objectives:["在任意机密/绝密行动中，使用任意精确射手步枪/栓动狙击步枪，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:108,stage:3,type:'side',group:'战斗专家：狙击精英',order:2,title:'108.【狙击精英-2】',objectives:["在任意机密/绝密行动中，使用任意配备6倍及以上倍率瞄准镜的枪械，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:109,stage:3,type:'side',group:'战斗专家：狙击精英',order:3,title:'109.【狙击精英-3】',objectives:["在任意机密/绝密行动中，使用 【M700狙击步枪】/ 【杠杆式步枪】/ 【SKS射手步枪】/ 【M14射手步枪】，累计击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:110,stage:3,type:'side',group:'战斗专家：狙击精英',order:4,title:'110.【狙击精英-4】',objectives:["在任意机密/绝密行动中，使用任意栓动狙击步枪，在30米外击败3名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:111,stage:3,type:'side',group:'战斗专家：狙击精英',order:5,title:'111.【狙击精英-5】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在任意机密/绝密行动中，使用 【R93狙击步枪】，击败1名敌方特战干员","在任意机密/绝密行动中，使用 【PSG-1射手步枪】，击败1名敌方特战干员","在任意机密/绝密行动中，使用任意手枪，击败1名敌方特战干员"],maps:["任意"],requiresComplete:true},
+    {id:112,stage:3,type:'side',group:'双钻迷局',order:1,title:'112.【渡鸦的玩笑】',objectives:["在潮汐监狱绝密行动中，前往渡鸦密室内指定地点，超感回溯军情录音处所遗留的语音线索","在潮汐监狱绝密行动中，成功首次开启1次服务器","在潮汐监狱绝密行动中，成功首次破解1次骇客电脑"],maps:["潮汐监狱"],requiresComplete:false},
+    {id:113,stage:3,type:'side',group:'双钻迷局',order:2,title:'113.【偷梁换柱】',objectives:["在零号大坝机密/永夜行动中，前往大坝雷区内，超感回溯军用终端处所遗留的语音线索","在零号大坝机密/永夜行动中，前往集装箱区域，超感回溯军用终端处所遗留的语音线索","在零号大坝或长弓溪谷的机密/永夜行动中，在任意地点的藏宝堆处成功埋藏并送出1件任务物品 【人工晶簇复制品】（需要前往研发部门军需处购买）","在巴克什或航天基地的机密/绝密行动中，在任意地点的藏宝堆处成功埋藏并送出1件任务物品 【人工晶簇复制品】（需要前往研发部门军需处购买）"],maps:["零号大坝","巴克什","航天基地","长弓溪谷"],requiresComplete:false},
+    {id:114,stage:3,type:'side',group:'双钻迷局',order:3,title:'114.【双钻迷局】',objectives:["在零号大坝机密/永夜行动中，前往大坝雷区内，超感回溯军用终端处所遗留的语音线索","在巴克什机密/绝密行动中，前往大浴场二楼走廊处，超感回溯军用终端处所遗留的语音线索","在航天基地机密/绝密行动中，前往中控区沙地，超感回溯军用终端处所遗留的语音线索","在任意机密/绝密行动中，累计成功埋藏并送出2件任务物品 【人工晶簇复制品】（需要前往研发部门军需处购买）"],maps:["零号大坝","巴克什","航天基地"],requiresComplete:false},
+    {id:115,stage:3,type:'side',group:'双钻迷局',order:4,title:'115.【穷途末路】',objectives:["单局任务目标全部完成否则重置整个任务进度","在巴克什机密/绝密行动中，前往老城区指定民房内，超感回溯卫星电话处所遗留的语音线索","在巴克什机密/绝密行动中，前往老城区丢包撤离点附近，超感回溯作战终端处所遗留的语音线索","在巴克什机密/绝密行动中，前往老城区安全屋内，获取任务物品 【染血的留言条】","在巴克什机密/绝密行动中，携带任务物品 【染血的留言条】，成功撤离"],maps:["巴克什"],requiresComplete:true},
+    {id:116,stage:3,type:'side',group:'双钻迷局',order:5,title:'116.【天堂与地狱】',objectives:["单局任务目标全部完成否则重置整个任务进度","在潮汐监狱绝密行动中，前往牢房深处，超感回溯渡鸦项链处所遗留的语音线索","在潮汐监狱绝密行动中，前往牢房深处，获取任务物品 【花哨的预告信】","在潮汐监狱绝密行动中，携带任务物品 【花哨的预告信】，成功撤离","在潮汐监狱绝密行动中，前往下水道撤离点附近，超感回溯收音机处所遗留的语音线索"],maps:["潮汐监狱"],requiresComplete:true},
+    {id:117,stage:3,type:'side',group:'战斗专家：区域猎手',order:1,title:'117.【区域猎手：行动开始】',objectives:["在零号大坝或长弓溪谷的机密/永夜行动中，累计击败3名特战干员"],maps:["零号大坝","长弓溪谷"],requiresComplete:false},
+    {id:118,stage:3,type:'side',group:'战斗专家：区域猎手',order:2,title:'118.【区域猎手：大坝】',objectives:["在零号大坝机密/永夜行动中，在大坝的西部区域（水泥厂、军营）累计击败3名特战干员"],maps:["零号大坝"],requiresComplete:false},
+    {id:119,stage:3,type:'side',group:'战斗专家：区域猎手',order:3,title:'119.【区域猎手：巴别塔】',objectives:["在巴克什机密/绝密行动中，在巴克什的北部区域（巴克什老城区），累计击败3名特战干员"],maps:["巴克什"],requiresComplete:false},
+    {id:120,stage:3,type:'side',group:'战斗专家：区域猎手',order:4,title:'120.【区域猎手：中心区】',objectives:["在航天基地机密/绝密行动中，在航天基地全域，累计击败3名特战干员"],maps:["航天基地"],requiresComplete:false},
+    {id:121,stage:3,type:'side',group:'战斗专家：区域猎手',order:5,title:'121.【我心永恒】',objectives:["在任意机密/绝密行动中，击败2名敌方特战干员"],maps:["任意"],requiresComplete:false},
+    {id:122,stage:3,type:'side',group:'次世代练爱',order:1,title:'122.【失控的战争机器】',objectives:["在巴克什机密/绝密行动中，前往巴克什博物馆前道路，超感回溯战车对峙区附近作战电台处所遗留的语音线索","在巴克什机密/绝密行动中，击败任意6名哈夫克士兵（若队内多人同时接取该任务，此目标进度在接取任务队友间共享）","在巴克什机密/绝密行动中，完成2次任意局内行动"],maps:["巴克什"],requiresComplete:false},
+    {id:123,stage:3,type:'side',group:'次世代练爱',order:2,title:'123.【野心家的棋局】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往码头主楼休息室，超感回溯卫星电话处所遗留的语音线索","在航天基地机密/绝密行动中，前往中控区二楼控制中心，超感回溯卫星电话处所遗留的语音线索"],maps:["航天基地"],requiresComplete:true},
+    {id:124,stage:3,type:'side',group:'次世代练爱',order:3,title:'124.【荒诞的碰撞】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往航天基地试车场外围，超感回溯军用电台处所遗留的语音线索","在航天基地机密/绝密行动中，前往航天基地试车场内机柜附近，放置任务物品 【AI搭载型移动终端Ⅲ型】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往核心区黑室机房内，放置任务物品 【AI搭载型移动终端Ⅲ型】（需要前往研发部门军需处购买）"],maps:["航天基地"],requiresComplete:true},
+    {id:125,stage:3,type:'side',group:'次世代练爱',order:4,title:'125.【CC的恶作剧】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往码头一楼，超感回溯军情录音处所遗留的语音线索","在航天基地机密/绝密行动中，前往中控区控制中心指定地点，放置任务物品 【AI搭载型移动终端Ⅲ型】（需要前往研发部门军需处购买）","在航天基地机密/绝密行动中，前往中控区二楼破损入口处指定地点，获取任务物品 【被弃置的剧本】"],maps:["航天基地"],requiresComplete:true},
+    {id:126,stage:3,type:'side',group:'次世代练爱',order:5,title:'126.【恐怖的平衡】',objectives:["单局任务目标全部完成否则重置整个任务进度","在航天基地机密/绝密行动中，前往总裁室，超感回溯军情录音处所遗留的语音线索","在航天基地机密/绝密行动中，前往核心区中庭，超感回溯军情录音处所遗留的语音线索","在航天基地机密/绝密行动中，前往宿舍区码头，获取任务物品 【写在终端上的告白信】","在航天基地机密/绝密行动中，携带任务物品 【写在终端上的告白信】，成功撤离"],maps:["航天基地"],requiresComplete:true},
+    {id:127,stage:3,type:'side',group:'逃脱艺术：金蝉脱壳',order:1,title:'127.【逃脱艺术：自掏腰包】',objectives:["在长弓溪谷或零号大坝的机密/永夜行动中，从任意付费撤离点成功撤离2次"],maps:["零号大坝","长弓溪谷"],requiresComplete:false},
+    {id:128,stage:3,type:'side',group:'逃脱艺术：金蝉脱壳',order:2,title:'128.【逃脱艺术：金蝉脱壳】',objectives:["在零号大坝机密/永夜行动中，从维修通道（丢包撤离点）成功撤离1次","在巴克什机密/绝密行动中，从通向溪谷的路（丢包撤离点）成功撤离1次","在航天基地机密/绝密行动中，从试车场撤离点（丢包撤离点）成功撤离1次"],maps:["零号大坝","巴克什","航天基地"],requiresComplete:false},
+    {id:129,stage:3,type:'side',group:'逃脱艺术：金蝉脱壳',order:3,title:'129.【逃脱艺术：接力棒】',objectives:["在零号大坝机密/永夜行动中，从工业电梯撤离点成功撤离1次","在巴克什机密/绝密行动中，从浴场拉闸撤离点/巴别塔前拉闸撤离点成功撤离1次","在航天基地机密/绝密行动中，从直升机拉闸撤离点成功撤离1次"],maps:["零号大坝","巴克什","航天基地"],requiresComplete:false},
+    {id:130,stage:3,type:'side',group:'逃脱艺术：金蝉脱壳',order:4,title:'130.【逃脱艺术：大干一票】',objectives:["在航天基地机密/绝密行动中，从火箭撤离点成功撤离1次（需要通过【飞升者行动】激活）","在巴克什机密/绝密行动中，从停机坪博士撤离点成功撤离1次（需要通过【庇护者行动】激活）"],maps:["巴克什","航天基地"],requiresComplete:false},
+    {id:131,stage:3,type:'side',group:'逃脱艺术：金蝉脱壳',order:5,title:'131.【逃脱艺术：唯我独尊】',objectives:["任务过程中如撤离失败 则重置整个任务进度","在航天基地机密/绝密行动中，从火箭撤离点（需要通过【飞升者行动】激活）/直升机拉闸撤离点成功撤离1次","在巴克什机密/绝密行动中，从浴场拉闸撤离点/巴别塔前拉闸撤离点/巴别塔顶撤离点成功撤离1次"],maps:["巴克什","航天基地"],requiresComplete:true},
+    {id:132,stage:3,type:'side',group:'博物强识：精致人生',order:1,title:'132.【精致人生-1】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥紫色的医疗物品/能源燃料类收集品"],maps:["任意"],requiresComplete:false},
+    {id:133,stage:3,type:'side',group:'博物强识：精致人生',order:2,title:'133.【精致人生-2】',objectives:["在任意机密/绝密行动中，成功首次开启8次【一件衣服】"],maps:["任意"],requiresComplete:false},
+    {id:134,stage:3,type:'side',group:'博物强识：精致人生',order:3,title:'134.【精致人生-3】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥金色的电子物品/资料情报类收集品"],maps:["任意"],requiresComplete:false},
+    {id:135,stage:3,type:'side',group:'博物强识：精致人生',order:4,title:'135.【精致人生-4】',objectives:["在任意机密/绝密行动中，成功首次破解8次小保险箱"],maps:["任意"],requiresComplete:false},
+    {id:136,stage:3,type:'side',group:'博物强识：精致人生',order:5,title:'136.【精致人生-5】',objectives:["单局任务目标全部完成否则重置整个任务进度","在任意机密/绝密行动中，成功首次破解1次小保险箱","在任意机密/绝密行动中，成功首次开启1次服务器","在任意机密/绝密行动中，成功首次开启1次保险箱"],maps:["任意"],requiresComplete:true},
+    {id:137,stage:3,type:'side',group:'博物强识：风卷残云',order:1,title:'137.【拾荒者-1】',objectives:["在任意机密/绝密行动中，成功首次开启10次野外战备箱"],maps:["任意"],requiresComplete:false},
+    {id:138,stage:3,type:'side',group:'博物强识：风卷残云',order:2,title:'138.【拾荒者-2】',objectives:["在任意机密/绝密行动中，累计成功带出8件品质≥紫色的家居物品/工具材料类收集品"],maps:["任意"],requiresComplete:false},
+    {id:139,stage:3,type:'side',group:'博物强识：风卷残云',order:3,title:'139.【拾荒者-3】',objectives:["在任意机密/绝密行动中，成功首次开启10次工具柜"],maps:["任意"],requiresComplete:false},
+    {id:140,stage:3,type:'side',group:'博物强识：风卷残云',order:4,title:'140.【拾荒者-4】',objectives:["在任意机密/绝密行动中，累计成功带出5件品质≥金色的工艺藏品类收集品"],maps:["任意"],requiresComplete:false},
+    {id:141,stage:3,type:'side',group:'博物强识：风卷残云',order:5,title:'141.【拾荒者-5】',objectives:["在任意机密/绝密行动中，成功首次开启6次军用医疗包","在任意机密/绝密行动中，成功首次开启6次医疗物资堆"],maps:["任意"],requiresComplete:false},
+];
+
+    // Helper functions
+    function getItemTags(text) {
+        var items = [];
+        var matches = text.match(/【([^】]+)】/g) || [];
+        for (var i = 0; i < matches.length; i++) {
+            items.push(matches[i].replace(/【|】/g, ''));
+        }
+        return items;
+    }
+
+    function isTaskUnlocked(task, stageTasks) {
+        if (task.type !== 'side' || !task.order || task.order === 0) return true;
+        var groupTasks = stageTasks.filter(function(t) { return t.group === task.group; });
+        groupTasks.sort(function(a, b) { return a.order - b.order; });
+        for (var i = 0; i < groupTasks.length; i++) {
+            if (groupTasks[i].id === task.id) {
+                if (i === 0) return true;
+                var prevTask = groupTasks[i - 1];
+                return localStorage.getItem('task-' + prevTask.id) === 'true';
+            }
+        }
+        return true;
+    }
+
+    function getLinkedTasks(task, stageTasks) {
+        var linked = [];
+        var taskMaps = task.maps || [];
+        if (taskMaps.indexOf('任意') !== -1) return linked;
+
+        var isMain = task.type === 'main';
+        var isCompleted = localStorage.getItem('task-' + task.id) === 'true';
+
+        for (var i = 0; i < stageTasks.length; i++) {
+            var t = stageTasks[i];
+            if (t.id === task.id) continue;
+            if (localStorage.getItem('task-' + t.id) === 'true') continue;
+
+            // 主线：只关联支线
+            if (isMain) {
+                if (t.type !== 'side') continue;
+            } else {
+                // 支线：只关联其他支线组（不同group），不关联主线
+                if (t.type === 'main') continue;
+                if (t.type === 'side' && t.group === task.group) continue;
+            }
+
+            // 检查是否有共同地图
+            for (var j = 0; j < taskMaps.length; j++) {
+                if (t.maps && t.maps.indexOf(taskMaps[j]) !== -1 && taskMaps[j] !== '任意') {
+                    var exists = false;
+                    for (var k = 0; k < linked.length; k++) {
+                        if (linked[k].task.id === t.id) { exists = true; break; }
+                    }
+                    if (!exists) linked.push({task: t, map: taskMaps[j]});
+                }
+            }
+        }
+        return linked;
+    }
+
+    function taskNeedsItem(task) {
+        // 标题以"任务物品"开头
+        if (task.title.startsWith('任务物品')) return true;
+        for (var i = 0; i < task.objectives.length; i++) {
+            var obj = task.objectives[i];
+            // 放置物品、上交（带入局）
+            if ((obj.includes('放置') || obj.includes('上交')) && !obj.includes('成功撤离')) {
+                return true;
+            }
+            // 携带撤离 或 军需处购买提示
+            if (obj.includes('携带撤离') || obj.includes('（需要前往研发部门军需处购买）')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function taskHasKill(task) {
+        for (var i = 0; i < task.objectives.length; i++) {
+            var obj = task.objectives[i];
+            if (obj.includes('击败')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getTaskItems(task) {
+        var items = [];
+        for (var i = 0; i < task.objectives.length; i++) {
+            var obj = task.objectives[i];
+            // 提取【】中的物品名
+            var matches = obj.match(/【([^】]+)】/g) || [];
+            for (var j = 0; j < matches.length; j++) {
+                var itemName = matches[j].replace(/【|】/g, '');
+                if (itemName && items.indexOf(itemName) === -1) {
+                    items.push(itemName);
+                }
+            }
+            // 捕获军需处购买提示
+            if (obj.includes('（需要前往研发部门军需处购买）')) {
+                if (items.indexOf('（需前往军需处购买）') === -1) {
+                    items.push('（需前往军需处购买）');
+                }
+            }
+            // 捕获携带撤离提示
+            if (obj.includes('携带撤离') && !obj.match(/【([^】]+)】/)) {
+                // 如果没有【】物品名，提取"携带"后面的内容
+                var m = obj.match(/携带([^，,，]+)/);
+                if (m && items.indexOf('携带' + m[1]) === -1) {
+                    items.push('携带' + m[1]);
+                }
+            }
+        }
+        return items;
+    }
+
+    function renderTaskItem(task, stageTasks) {
+        var isCompleted = localStorage.getItem('task-' + task.id) === 'true';
+        var isUnlocked = isTaskUnlocked(task, stageTasks);
+        var needsItem = taskNeedsItem(task);
+
+        var html = '<div class="task-item';
+        if (isCompleted) html += ' completed';
+        if (!isUnlocked) html += ' locked';
+        if (needsItem) html += ' need-item';
+        html += '" id="task-' + task.id + '">';
+
+        html += '<div class="task-header">';
+        if (!isUnlocked) {
+            html += '<div class="task-checkbox locked"></div>';
+        } else {
+            html += '<div class="task-checkbox' + (isCompleted ? ' checked' : '') + '" data-id="' + task.id + '"></div>';
+        }
+        html += '<span class="task-title-text">' + task.title + '</span>';
+        var typeLabel = task.type === 'main' ? '主线' : task.type === 'fate' ? '命运' : '支线';
+        html += '<span class="task-type ' + task.type + '">' + typeLabel + '</span>';
+        if (needsItem) html += '<span class="tag tag-need">需携带</span>';
+        if (task.requiresComplete) html += '<span class="tag tag-must">需整局</span>';
+        if (!isUnlocked && task.order > 1) html += '<span class="tag tag-seq">需完成上一步</span>';
+        html += '</div>';
+
+        html += '<div class="task-objectives">';
+        for (var i = 0; i < task.objectives.length; i++) {
+            var obj = task.objectives[i];
+            var objItems = getItemTags(obj);
+            html += '<div class="objective">' + obj;
+            if (objItems.length > 0) {
+                html += '<div class="objective-tags">';
+                for (var it = 0; it < objItems.length; it++) {
+                    html += '<span class="tag tag-item">' + objItems[it] + '</span>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Add map tags
+        if (task.maps && task.maps.length > 0 && task.maps[0] !== '任意') {
+            html += '<div class="objective-tags" style="margin-top:6px;">';
+            for (var m = 0; m < task.maps.length; m++) {
+                html += '<span class="tag tag-map">' + task.maps[m] + '</span>';
+            }
+            html += '</div>';
+        }
+
+        // Linked tasks
+        var linked = isUnlocked ? getLinkedTasks(task, stageTasks) : [];
+        if (linked.length > 0) {
+            html += '<div class="links-section">';
+            html += '<div class="links-title">同地图关联 (' + linked.length + ')</div>';
+            for (var l = 0; l < linked.length; l++) {
+                html += '<span class="linked-task" data-id="' + linked[l].task.id + '">' + linked[l].task.title + ' (' + linked[l].map + ')</span>';
+            }
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function renderStageContent(stageNum) {
+        var containerId = 'stage-' + stageNum;
+        var container = document.getElementById(containerId);
+        if (!container) return;
+
+        var stageTasks = allTasks.filter(function(t) { return t.stage === stageNum; });
+        var mainTasks = stageTasks.filter(function(t) { return t.type === 'main'; });
+        var sideTasks = stageTasks.filter(function(t) { return t.type === 'side'; });
+
+        // Group side tasks by group name
+        var sideGroups = {};
+        for (var i = 0; i < sideTasks.length; i++) {
+            var t = sideTasks[i];
+            var gname = t.group || '其他';
+            if (!sideGroups[gname]) sideGroups[gname] = [];
+            sideGroups[gname].push(t);
+        }
+
+        var html = '';
+        if (mainTasks.length > 0 || sideTasks.length > 0) {
+            html += '<div class="stage-body">';
+
+            // Main column
+            if (mainTasks.length > 0) {
+                html += '<div class="quest-column">';
+                var mainCompleted = mainTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+                var checkClass = mainCompleted === mainTasks.length && mainTasks.length > 0 ? 'checked' : (mainCompleted > 0 ? 'indeterminate' : '');
+                html += '<div class="column-header main"><span>主线任务</span><span class="count">' + mainCompleted + '/' + mainTasks.length + '个</span><div class="column-check ' + checkClass + '" data-type="main" data-stage="' + stageNum + '" onclick="toggleColumnCheck(\'main\', ' + stageNum + ')"></div></div>';
+                for (var i = 0; i < mainTasks.length; i++) {
+                    html += renderTaskItem(mainTasks[i], stageTasks);
+                }
+                html += '</div>';
+            }
+
+            // Side column
+            if (sideTasks.length > 0) {
+                html += '<div class="quest-column">';
+                var config = stageStarConfig[stageNum];
+                var stageStars = config && config.required > 0 ? getStageStars(stageNum) : 0;
+                var starDisplay = config && config.required > 0 ? '★ ' + stageStars + '/' + config.required : sideTasks.length + '个';
+                html += '<div class="column-header side"><span>支线任务</span><span class="count">' + starDisplay + '</span></div>';
+                var groupNames = Object.keys(sideGroups).sort(function(a, b) {
+                    // Sort by first task id in each group
+                    return sideGroups[a][0].id - sideGroups[b][0].id;
+                });
+                for (var g = 0; g < groupNames.length; g++) {
+                    var gname = groupNames[g];
+                    var gTasks = sideGroups[gname];
+                    html += '<div class="side-group">';
+                    var isSequential = gTasks.length > 1 && gTasks[0].order > 0;
+                    var stars = groupStars[gname] || 0;
+                    var completedInGroup = gTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+                    var allCompleted = completedInGroup === gTasks.length && gTasks.length > 0;
+                    // 支线组标题的星星：全部完成后显示可获得的星星（金色），否则显示空星星（灰色）
+                    var starHtml = stars > 0 ? '<span class="star">' + (allCompleted ? '★'.repeat(stars) : '☆'.repeat(stars)) + '</span> ' : '';
+                    var checkClass = completedInGroup > 0 ? (allCompleted ? 'checked' : 'indeterminate') : '';
+                    html += '<div class="side-group-header" data-group="' + gname.replace(/"/g, '&quot;') + '" onclick="toggleGroup(this)"><span class="lock-icon">' + (isSequential ? '📋' : '📁') + '</span>' + gname + ' ' + starHtml + '<div class="column-check ' + checkClass + '" onclick="event.stopPropagation();toggleColumnCheck(\'group\', \'' + gname.replace(/'/g, "\\'") + '\')"></div><span class="collapse-icon">▼</span></div>';
+                    for (var i = 0; i < gTasks.length; i++) {
+                        html += renderTaskItem(gTasks[i], stageTasks);
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            html += '</div>';
+        } else {
+            // Fate stage - full width
+            html += '<div class="stage-body full-width">';
+            html += '<div class="quest-column">';
+            html += '<div class="column-header main"><span>命运契约</span><span class="count">' + stageTasks.length + '个</span></div>';
+            for (var i = 0; i < stageTasks.length; i++) {
+                html += renderTaskItem(stageTasks[i], stageTasks);
+            }
+            html += '</div></div>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    function toggleTask(id) {
+        var task = allTasks.find(function(t) { return t.id === id; });
+        if (!task) return;
+        var stageTasks = allTasks.filter(function(t) { return t.stage === task.stage; });
+        if (!isTaskUnlocked(task, stageTasks)) return;
+
+        var current = localStorage.getItem('task-' + id) === 'true';
+        localStorage.setItem('task-' + id, !current);
+
+        renderStageContent(task.stage);
+        restoreCollapsedState();
+        updateStats();
+    }
+
+    function scrollToTask(id) {
+        var el = document.getElementById('task-' + id);
+        if (el) {
+            el.scrollIntoView({behavior: 'smooth', block: 'center'});
+            el.style.background = '#fff3cd';
+            setTimeout(function() { el.style.background = ''; }, 1500);
+        }
+    }
+
+    function toggleGroup(headerEl) {
+        var groupEl = headerEl.closest('.side-group');
+        if (groupEl) {
+            var groupName = headerEl.getAttribute('data-group');
+            var isCollapsed = groupEl.classList.contains('collapsed');
+            groupEl.classList.toggle('collapsed');
+            headerEl.classList.toggle('collapsed');
+            // 保存折叠状态
+            var collapsed = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+            collapsed[groupName] = !isCollapsed;
+            localStorage.setItem('collapsedGroups', JSON.stringify(collapsed));
+        }
+    }
+
+    function restoreCollapsedState() {
+        var collapsed = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+        Object.keys(collapsed).forEach(function(groupName) {
+            if (collapsed[groupName]) {
+                var header = document.querySelector('.side-group-header[data-group="' + groupName + '"]');
+                if (header) {
+                    var groupEl = header.closest('.side-group');
+                    if (groupEl) groupEl.classList.add('collapsed');
+                    header.classList.add('collapsed');
+                }
+            }
+        });
+    }
+
+    function toggleColumnCheck(type, stageOrGroup) {
+        if (type === 'main') {
+            // Toggle all main tasks in stage
+            var stageNum = stageOrGroup;
+            var tasks = allTasks.filter(function(t) { return t.stage === stageNum && t.type === 'main'; });
+            var allCompleted = tasks.every(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; });
+            var newValue = !allCompleted;
+            tasks.forEach(function(t) {
+                localStorage.setItem('task-' + t.id, newValue ? 'true' : 'false');
+            });
+            renderStageContent(stageNum);
+        } else if (type === 'group') {
+            // Toggle all tasks in group
+            var groupName = stageOrGroup;
+            var tasks = allTasks.filter(function(t) { return t.group === groupName; });
+            var allCompleted = tasks.every(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; });
+            var newValue = !allCompleted;
+            tasks.forEach(function(t) {
+                localStorage.setItem('task-' + t.id, newValue ? 'true' : 'false');
+            });
+            // Find stage and re-render
+            if (tasks.length > 0) {
+                renderStageContent(tasks[0].stage);
+            }
+        }
+        restoreCollapsedState();
+        updateStats();
+    }
+
+    function updateColumnChecks() {
+        // Update main column checks
+        [1,2,3,4,'fate'].forEach(function(stage) {
+            var mainTasks = allTasks.filter(function(t) { return t.stage === stage && t.type === 'main'; });
+            if (mainTasks.length === 0) return;
+            var completed = mainTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+            var checkEl = document.querySelector('.column-check[data-type="main"][data-stage="' + stage + '"]');
+            if (checkEl) {
+                checkEl.classList.remove('checked', 'indeterminate');
+                if (completed === mainTasks.length) {
+                    checkEl.classList.add('checked');
+                } else if (completed > 0) {
+                    checkEl.classList.add('indeterminate');
+                }
+            }
+        });
+        // Update group checks
+        Object.keys(groupStars).forEach(function(groupName) {
+            var groupTasks = allTasks.filter(function(t) { return t.group === groupName; });
+            if (groupTasks.length === 0) return;
+            var completed = groupTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+            var header = document.querySelector('.side-group-header[data-group="' + groupName + '"]');
+            if (header) {
+                var checkEl = header.querySelector('.column-check');
+                if (checkEl) {
+                    checkEl.classList.remove('checked', 'indeterminate');
+                    if (completed === groupTasks.length) {
+                        checkEl.classList.add('checked');
+                    } else if (completed > 0) {
+                        checkEl.classList.add('indeterminate');
+                    }
+                }
+            }
+        });
+    }
+
+    function markStageComplete(stageNum) {
+        if (!confirm('确定要将阶段' + stageNum + '的所有任务标记为已完成吗？')) return;
+        var tasks = allTasks.filter(function(t) { return t.stage === stageNum; });
+        tasks.forEach(function(t) {
+            localStorage.setItem('task-' + t.id, 'true');
+        });
+        renderStageContent(stageNum);
+        restoreCollapsedState();
+        updateStats();
+    }
+
+    function resetAllProgress() {
+        if (!confirm('确定要重置所有进度吗？此操作不可恢复！')) return;
+        allTasks.forEach(function(t) {
+            localStorage.removeItem('task-' + t.id);
+        });
+        renderStageContent(1);
+        renderStageContent(2);
+        renderStageContent(3);
+        renderStageContent(4);
+        renderStageContent('fate');
+        restoreCollapsedState();
+        updateStats();
+    }
+
+    function updateStats() {
+        updateTabProgress();
+        updateColumnChecks();
+        updateNeedItemsBar();
+    }
+
+    function getStageStars(stage) {
+        var sideTasks = allTasks.filter(function(t) { return t.stage === stage && t.type === 'side'; });
+        var earnedStars = 0;
+        Object.keys(groupStars).forEach(function(groupName) {
+            var groupTasks = sideTasks.filter(function(t) { return t.group === groupName; });
+            if (groupTasks.length > 0) {
+                var completedCount = groupTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+                if (completedCount === groupTasks.length) {
+                    earnedStars += groupStars[groupName];
+                }
+            }
+        });
+        return earnedStars;
+    }
+
+    function updateTabProgress() {
+        [1,2,3,4,'fate'].forEach(function(stage) {
+            var config = stageStarConfig[stage];
+            var tabEl = document.getElementById('tab-' + stage);
+            if (!tabEl) return;
+
+            var mainTasks = allTasks.filter(function(t) { return t.stage === stage && t.type === 'main'; });
+            var completedMain = mainTasks.filter(function(t) { return localStorage.getItem('task-' + t.id) === 'true'; }).length;
+
+            if (config && config.required > 0) {
+                var earnedStars = getStageStars(stage);
+                tabEl.textContent = completedMain + '/' + mainTasks.length + ' ★ ' + earnedStars + '/' + config.required;
+            } else {
+                tabEl.textContent = completedMain + '/' + mainTasks.length;
+            }
+        });
+    }
+
+    var currentMap = 'all';
+    function applyMapFilter() {
+        var tasks = document.querySelectorAll('.task-item');
+        for (var i = 0; i < tasks.length; i++) {
+            var el = tasks[i];
+            var taskId = parseInt(el.id.replace('task-', ''));
+            var task = allTasks.find(function(t) { return t.id === taskId; });
+            var show = true;
+
+            if (currentMap === 'all') {
+                show = true;
+            } else if (currentMap === 'kill') {
+                show = task && taskHasKill(task);
+            } else {
+                show = task && task.maps && task.maps.indexOf(currentMap) !== -1;
+            }
+
+            el.style.display = show ? '' : 'none';
+        }
+        updateNeedItemsBar();
+    }
+
+    function updateNeedItemsBar() {
+        var bar = document.getElementById('need-items-bar');
+        var list = document.getElementById('need-items-list');
+        if (!bar || !list) return;
+
+        // 收集所有未完成、未锁定支线任务需要的物品
+        var taskItems = [];
+        allTasks.forEach(function(t) {
+            if (localStorage.getItem('task-' + t.id) === 'true') return;
+            if (t.type === 'main') return;
+            // 过滤未解锁的任务
+            var stageTasks = allTasks.filter(function(st) { return st.stage === t.stage; });
+            if (!isTaskUnlocked(t, stageTasks)) return;
+            if (taskNeedsItem(t)) {
+                var items = getTaskItems(t);
+                if (items.length > 0) {
+                    taskItems.push({
+                        id: t.id,
+                        title: t.title,
+                        stage: t.stage,
+                        items: items
+                    });
+                }
+            }
+        });
+
+        if (taskItems.length === 0) {
+            bar.classList.add('hidden');
+            return;
+        }
+
+        bar.classList.remove('hidden');
+        var html = '';
+        taskItems.forEach(function(t) {
+            html += '<div class="need-item-tag" data-task-id="' + t.id + '" onclick="jumpToTask(' + t.id + ')">';
+            html += '<strong>' + t.title + '</strong>';
+            html += ' — ' + t.items.join(', ');
+            html += '</div>';
+        });
+        list.innerHTML = html;
+    }
+
+    function jumpToTask(taskId) {
+        // 找到任务所在的阶段
+        var task = allTasks.find(function(t) { return t.id === taskId; });
+        if (!task) return;
+
+        // 切换到对应阶段标签
+        var tabs = document.querySelectorAll('.stage-tab');
+        tabs.forEach(function(tab) {
+            tab.classList.remove('active');
+            if (tab.dataset.stage == task.stage) {
+                tab.classList.add('active');
+            }
+        });
+
+        // 切换阶段内容
+        var contents = document.querySelectorAll('.stage-content');
+        contents.forEach(function(c) { c.classList.remove('active'); });
+        var targetContent = document.getElementById('stage-' + task.stage);
+        if (targetContent) targetContent.classList.add('active');
+
+        // 滚动到任务
+        setTimeout(function() {
+            var taskEl = document.getElementById('task-' + taskId);
+            if (taskEl) {
+                taskEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+                taskEl.style.background = '#fff3cd';
+                setTimeout(function() { taskEl.style.background = ''; }, 2000);
+            }
+        }, 100);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Render all stages
+        renderStageContent(1);
+        renderStageContent(2);
+        renderStageContent(3);
+        renderStageContent(4);
+        renderStageContent('fate');
+
+        // 恢复折叠状态
+        restoreCollapsedState();
+
+        // Tab switching
+        var tabs = document.querySelectorAll('.stage-tab');
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].addEventListener('click', function() {
+                var tabs2 = document.querySelectorAll('.stage-tab');
+                for (var j = 0; j < tabs2.length; j++) tabs2[j].classList.remove('active');
+                var contents = document.querySelectorAll('.stage-content');
+                for (var k = 0; k < contents.length; k++) contents[k].classList.remove('active');
+                this.classList.add('active');
+                document.getElementById('stage-' + this.dataset.stage).classList.add('active');
+            });
+        }
+
+        // Map filter
+        var filterBtns = document.querySelectorAll('.filter-btn');
+        for (var i = 0; i < filterBtns.length; i++) {
+            filterBtns[i].addEventListener('click', function() {
+                currentMap = this.dataset.map;
+                var btns = document.querySelectorAll('.filter-btn');
+                for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+                this.classList.add('active');
+                applyMapFilter();
+            });
+        }
+
+        // Click delegation
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('task-checkbox') && !e.target.classList.contains('locked')) {
+                toggleTask(parseInt(e.target.dataset.id));
+            }
+            if (e.target.classList.contains('linked-task')) {
+                scrollToTask(parseInt(e.target.dataset.id));
+            }
+        });
+
+        updateStats();
+    });
+    </script>
+</body>
+</html>
